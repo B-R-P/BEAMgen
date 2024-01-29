@@ -8,33 +8,6 @@ class Tag(IntEnum):
     X = 3
     F = 5
 
-def encode_arg(tag, n):
-    if n < 0:
-        raise NotImplementedError("Negative numbers not supported yet")
-    elif n < 16:
-        return [(n << 4) | tag]
-    elif n < 0x800:
-        a = (((n >> 3) & 0b11100000) | tag | 0b00001000).to_bytes(1, 'big')
-        b = (n & 0xFF).to_bytes(1, 'big')
-        return list(a + b)
-    else:
-        raise NotImplementedError("Large numbers not supported yet")
-
-def pad_chunk(word_size, chunk):
-    len_chunk = len(chunk)
-    new_len = (len_chunk + word_size - 1) // word_size * word_size
-    chunk.extend([0] * (new_len - len_chunk))
-
-def encode_chunk(tag, chunk):
-    result = bytearray()
-    result.extend(tag)
-    result.extend(len(chunk).to_bytes(4, 'big'))
-    result.extend(chunk)
-    pad_chunk(4, result)
-    return result
-
-
-
 class OpCode(IntEnum):
     Label = 1
     FuncInfo = 2
@@ -63,6 +36,58 @@ class Binop(Expr):
 class BinopKind:
     Sum = "Sum"
     Sub = "Sub"
+
+class Type(IntEnum):
+    Int = 1
+
+class Param:
+    def __init__(self, name, type, index):
+        self.name = name
+        self.type = type
+        self.index = index
+
+class Func:
+    def __init__(self, name, params, body):
+        self.name = name
+        self.params = params
+        self.body = body
+
+class CompiledFunc:
+    def __init__(self, label, arity):
+        self.label = label
+        self.arity = arity
+
+class Module:
+    def __init__(self):
+        self.funcs = {}
+
+
+def encode_arg(tag, n):
+    if n < 0:
+        raise NotImplementedError("Negative numbers not supported yet")
+    elif n < 16:
+        return [(n << 4) | tag]
+    elif n < 0x800:
+        a = (((n >> 3) & 0b11100000) | tag | 0b00001000).to_bytes(1, 'big')
+        b = (n & 0xFF).to_bytes(1, 'big')
+        return list(a + b)
+    else:
+        raise NotImplementedError("Large numbers not supported yet")
+
+def pad_chunk(word_size, chunk):
+    len_chunk = len(chunk)
+    new_len = (len_chunk + word_size - 1) // word_size * word_size
+    chunk.extend([0] * (new_len - len_chunk))
+
+def encode_chunk(tag, chunk):
+    result = bytearray()
+    result.extend(tag)
+    result.extend(len(chunk).to_bytes(4, 'big'))
+    result.extend(chunk)
+    pad_chunk(4, result)
+    return result
+
+
 
 def compile_expr(expr, atoms, imports, code, params, stack_size):
     stack_start = len(params)
@@ -115,20 +140,6 @@ def compile_expr(expr, atoms, imports, code, params, stack_size):
 
     return False
 
-class CompiledFunc:
-    def __init__(self, label, arity):
-        self.label = label
-        self.arity = arity
-
-class Module:
-    def __init__(self, funcs):
-        self.funcs = funcs
-
-class Func:
-    def __init__(self, name, params, body):
-        self.name = name
-        self.params = params
-        self.body = body
 
 
 def encode_code_chunk(module, imports, atoms, labels):
@@ -195,16 +206,6 @@ def resolve_function_signature(atoms, module, func, arity):
         atoms.get_id(func),
         arity
     )
-
-# Example class used in the code
-class Atoms:
-    def __init__(self):
-        self.names = []
-
-    def get_id(self, name):
-        if name not in self.names:
-            self.names.append(name)
-        return self.names.index(name)
 
 def encode_imports_chunk(atoms, imports):
     chunk = bytearray()
@@ -276,21 +277,3 @@ def generate_output_bytes(module):
     bytes_data.extend(len(beam).to_bytes(4, 'big'))
     bytes_data.extend(beam)
     return bytes_data
-class Type(IntEnum):
-    Int = 1
-
-class Param:
-    def __init__(self, name, type, index):
-        self.name = name
-        self.type = type
-        self.index = index
-
-class Func:
-    def __init__(self, name, params, body):
-        self.name = name
-        self.params = params
-        self.body = body
-
-class Module:
-    def __init__(self):
-        self.funcs = {}
