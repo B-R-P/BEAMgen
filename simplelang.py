@@ -1,4 +1,4 @@
-from beam import *
+from compiler import *
 
 custom_module = Module()
 x_param = Param(name="x",type=Type.Int,index=0)
